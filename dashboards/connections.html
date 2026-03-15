@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>SQL Connection Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; font-size: 13px; }
+        th { background: #eee; text-align: left; }
+        h1 { margin-bottom: 5px; }
+        .timestamp { color: #666; font-size: 12px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <h1>SQL Connection Dashboard</h1>
+    <div class="timestamp">Generated: {{timestamp}}</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Session ID</th>
+                <th>Login</th>
+                <th>Host</th>
+                <th>Program</th>
+                <th>Status</th>
+                <th>Last Request Start</th>
+                <th>Last Request End</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{rows}}
+        </tbody>
+    </table>
+</body>
+</html>
