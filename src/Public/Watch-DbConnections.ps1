@@ -16,9 +16,11 @@ function Watch-DbConnections {
     $Previous = @()
 
     while ($true) {
+
+        # Get current snapshot
         $Current = Get-DbConnections -SqlInstance $SqlInstance -Database $Database
 
-        # Detect new connections
+        # Detect NEW connections
         $New = $null
         if ($Previous) {
             $New = Compare-Object -ReferenceObject $Previous -DifferenceObject $Current -Property session_id -PassThru |
@@ -29,10 +31,25 @@ function Watch-DbConnections {
             $New = $Current
         }
 
-        # Log only NEW connections
+        # Detect DROPPED connections
+        $Dropped = $null
+        if ($Previous) {
+            $Dropped = Compare-Object -ReferenceObject $Previous -DifferenceObject $Current -Property session_id -PassThru |
+                       Where-Object { $_.SideIndicator -eq '<=' }
+        }
+
+        # Log NEW connections
         if ($New) {
             foreach ($conn in $New) {
                 $msg = "NEW CONNECTION: session_id=$($conn.session_id) login=$($conn.login_name) host=$($conn.host_name) program=$($conn.program_name)"
+                Write-Log $msg
+            }
+        }
+
+        # Log DROPPED connections
+        if ($Dropped) {
+            foreach ($conn in $Dropped) {
+                $msg = "DROPPED CONNECTION: session_id=$($conn.session_id) login=$($conn.login_name) host=$($conn.host_name) program=$($conn.program_name)"
                 Write-Log $msg
             }
         }
@@ -47,11 +64,19 @@ function Watch-DbConnections {
             Write-Host "No active connections."
         }
 
+        # Display NEW connections
         if ($New) {
             Write-Host "`n*** NEW CONNECTION(S) DETECTED ***" -ForegroundColor Yellow
             $New | Format-Table -AutoSize
         }
 
+        # Display DROPPED connections
+        if ($Dropped) {
+            Write-Host "`n*** DROPPED CONNECTION(S) DETECTED ***" -ForegroundColor Red
+            $Dropped | Format-Table -AutoSize
+        }
+
+        # Prepare for next loop
         $Previous = $Current
         Start-Sleep -Seconds $IntervalSeconds
     }
