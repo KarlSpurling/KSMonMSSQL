@@ -11,24 +11,36 @@ function Invoke-DbQuery {
     )
 
     try {
-        # Detect host,port format
+        # Parse instance and port
         if ($SqlInstance -match ',') {
             $parts = $SqlInstance.Split(',')
             $server = $parts[0]
             $port   = $parts[1]
-
-            $conn = "Server=tcp:$server,$port;Database=$Database;Trusted_Connection=True;"
-            Write-Log "Connecting using connection string: $conn"
-
-            return Invoke-Sqlcmd -ConnectionString $conn -Query $Query -ErrorAction Stop
+            $dataSource = "$server,$port"
         }
         else {
-            Write-Log "Connecting using ServerInstance=$SqlInstance Database=$Database"
-            return Invoke-Sqlcmd -ServerInstance $SqlInstance -Database $Database -Query $Query -ErrorAction Stop
+            $dataSource = $SqlInstance
         }
+
+        $connString = "Server=$dataSource;Database=$Database;Trusted_Connection=True;Encrypt=False;"
+        Write-Log "Connecting using: $connString"
+
+        $conn = New-Object System.Data.SqlClient.SqlConnection $connString
+        $conn.Open()
+
+        $cmd = $conn.CreateCommand()
+        $cmd.CommandText = $Query
+
+        $adapter = New-Object System.Data.SqlClient.SqlDataAdapter $cmd
+        $table = New-Object System.Data.DataTable
+        $adapter.Fill($table) | Out-Null
+
+        $conn.Close()
+
+        return $table
     }
     catch {
-        $msg = "SQL connection failed: $($_.Exception.Message)"
+        $msg = "SQL connection/query failed: $($_.Exception.Message)"
         Write-Log $msg
         Write-Warning $msg
         throw
