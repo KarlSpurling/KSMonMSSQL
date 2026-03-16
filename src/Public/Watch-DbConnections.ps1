@@ -18,6 +18,26 @@ function Watch-DbConnections {
     while ($true) {
         $Current = Get-DbConnections -SqlInstance $SqlInstance -Database $Database
 
+        # Detect new connections
+        $New = $null
+        if ($Previous) {
+            $New = Compare-Object -ReferenceObject $Previous -DifferenceObject $Current -Property session_id -PassThru |
+                   Where-Object { $_.SideIndicator -eq '=>' }
+        }
+        elseif ($Current) {
+            # First run: treat all as new
+            $New = $Current
+        }
+
+        # Log only NEW connections
+        if ($New) {
+            foreach ($conn in $New) {
+                $msg = "NEW CONNECTION: session_id=$($conn.session_id) login=$($conn.login_name) host=$($conn.host_name) program=$($conn.program_name)"
+                Write-Log $msg
+            }
+        }
+
+        # Display table
         Clear-Host
         Write-Host "Active connections as of $(Get-Date):`n"
 
@@ -25,14 +45,6 @@ function Watch-DbConnections {
             $Current | Format-Table -AutoSize
         } else {
             Write-Host "No active connections."
-        }
-
-        $New = $null
-        if ($Previous) {
-            $New = Compare-Object -ReferenceObject $Previous -DifferenceObject $Current -Property session_id -PassThru |
-                   Where-Object { $_.SideIndicator -eq '=>' }
-        } elseif ($Current) {
-            $New = $Current
         }
 
         if ($New) {
